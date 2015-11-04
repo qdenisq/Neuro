@@ -1,0 +1,13 @@
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\neuro.exe.config
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\neuro.exe
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\neuro.pdb
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Bson.dll
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Driver.Core.dll
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Driver.dll
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Driver.Legacy.dll
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Bson.xml
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Driver.xml
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\bin\Release\MongoDB.Driver.Legacy.xml
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\obj\Release\neuro.exe
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\obj\Release\neuro.pdb
+C:\Users\Qdenisq\Documents\Visual Studio 2015\Projects\neuro\neuro\obj\Release\neuro.csprojResolveAssemblyReference.cache

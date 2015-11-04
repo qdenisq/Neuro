@@ -1,5 +1,8 @@
-﻿namespace neuro
+﻿using System;
+
+namespace neuro
 {
+    [Serializable]
     public class Voltage
     {
         public double Value { get; set; }
@@ -13,5 +16,7 @@
         {
             Value = 0.0;
         }
+
+        
     }
 }

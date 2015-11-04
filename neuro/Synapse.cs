@@ -7,15 +7,16 @@ using MongoDB.Bson;
 
 namespace neuro
 {
-    public class Synapse : ISynapse, IVersionable
+    [Serializable]
+    public class Synapse : SynapseBase
     {
-        public uint SynapseId { get; set; }
-        public uint PreSynCellObjectId { get; set; }
-        public uint PostSynCellObjectId { get; set; }
-        public EnSynapseType Type { get; set; }
-        public List<double> Vt { get; set; } 
-        public Time TimeToPostSynCellSoma { get; set; }
-        public Time TimeFromPreSynCellSoma { get; set; }
-        public uint Version { get; set; }
+        //public uint SynapseId { get; set; }
+        //public uint PreSynCellObjectId { get; set; }
+        //public uint PostSynCellObjectId { get; set; }
+        //public EnSynapseType Type { get; set; }
+        //public List<double> Vt { get; set; } 
+        //public Time TimeToPostSynCellSoma { get; set; }
+        //public Time TimeFromPreSynCellSoma { get; set; }
+        //public uint Version { get; set; }
     }
 }
