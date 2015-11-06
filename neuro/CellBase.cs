@@ -23,15 +23,13 @@ namespace neuro
         public volt VoltageRp { get; set; }
         [BsonElement("vthr")]
         public volt VoltageThresh { get; set; }
-        [BsonElement("psps")]
-        public List<PSP> Psps { get; set; }
         [BsonElement("p")]
         public Position Pos { get; set; }
         [BsonElement("v")]
         public uint Version { get; set; }
         [BsonElement("cv")]
         public volt CurrentVoltage { get; set; }
-
-       
+        [BsonElement("is")]
+        public bool IsSpiking { get; set; }
     }
 }

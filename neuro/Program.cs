@@ -56,29 +56,10 @@ namespace neuro
         static void Main(string[] args)
         {
            
-            var client = new MongoClient();
-            
-            var db = client.GetDatabase("neuro");
-            var cellCollection = db.GetCollection<BsonDocument>("cells");
-            var synCollection = db.GetCollection<BsonDocument>("synapses");
-            // InsertAsync(collection);
-            // Console.ReadLine();
-            //PrintIds(collection);
-            cellCollection.DeleteManyAsync(cell => true);
-            synCollection.DeleteManyAsync(cell => true);
-
-            CellService cellService = new CellService(cellCollection);
-            SynapseService synService = new SynapseService(synCollection);
-            NeuroService neuroService = new NeuroService(cellService, synService);
-            neuroService.Create();
-
-            NeuroRenderer renderer = new NeuroRenderer(neuroService);
-            neuroService.Renderer = renderer;
-            renderer.Init();
 
             Wrap wrapper = new Wrap();
-            wrapper.Service = neuroService;
-            wrapper.Renderer = renderer;
+            //wrapper.Service = neuroService;
+            //wrapper.Renderer = renderer;
             wrapper.Run();
             
             //neuroService.Run();
@@ -96,6 +77,29 @@ namespace neuro
 
         public async Task Run()
         {
+
+            var client = new MongoClient();
+
+            var db = client.GetDatabase("neuro");
+            var cellCollection = db.GetCollection<BsonDocument>("cells");
+            var synCollection = db.GetCollection<BsonDocument>("synapses");
+            // InsertAsync(collection);
+            // Console.ReadLine();
+            //PrintIds(collection);
+            cellCollection.DeleteManyAsync(cell => true);
+            synCollection.DeleteManyAsync(cell => true);
+
+            CellService cellService = new CellService(cellCollection);
+            SynapseService synService = new SynapseService(synCollection);
+            NeuroService neuroService = new NeuroService(cellService, synService);
+            Service = neuroService;
+            await neuroService.Create();
+
+            NeuroRenderer renderer = new NeuroRenderer(neuroService);
+            neuroService.Renderer = renderer;
+            Renderer = renderer;
+            renderer.Init();
+
             //Task.Factory.StartNew(Service.Run);
             Task.Factory.StartNew(Renderer.Start);
             Renderer.IRen.Render();

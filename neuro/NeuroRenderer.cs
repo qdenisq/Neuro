@@ -42,8 +42,8 @@ namespace neuro
         public void AddSynapseActor(SynapseBase synapse)
         {
             var line = new vtkLineSource();
-            var inPos = _service._cells[0][synapse.PreSynCellObjectId].Pos;
-            var outPos = _service._cells[0][synapse.PostSynCellObjectId].Pos;
+            var inPos = _service.Cells[0][synapse.PreSynCellObjectId].Pos;
+            var outPos = _service.Cells[0][synapse.PostSynCellObjectId].Pos;
             line.SetPoint1(inPos.X, inPos.Y, inPos.Z);
             line.SetPoint2(outPos.X, outPos.Y, outPos.Y);
             
@@ -86,11 +86,11 @@ namespace neuro
 
         public void Init()
         {
-            foreach (var cell in _service._cells[0])
+            foreach (var cell in _service.Cells[0])
             {
                 AddCellsActor(cell.Value);
             }
-            foreach (var syn in _service._synapses[0])
+            foreach (var syn in _service.Synapses[0])
             {
                 AddSynapseActor(syn.Value);
             }
@@ -110,7 +110,7 @@ namespace neuro
 
         public async Task<int> Update(int i)
         {
-            foreach (var pair in _service._cells[i])
+            foreach (var pair in _service.Cells[i])
             {
                 var cell = pair.Value;
                 var clr = GetColor(cell.CurrentVoltage);
@@ -118,7 +118,7 @@ namespace neuro
                 CellsActors[cell.CellId].GetProperty().SetOpacity(0.1 + clr[0]);
             }
 
-            foreach (var pair in _service._synapses[i])
+            foreach (var pair in _service.Synapses[i])
             {
                 var syn = pair.Value;
                 var clr = GetColor(syn.CurrentVoltage);

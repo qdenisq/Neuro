@@ -17,17 +17,120 @@ namespace neuro
     using volt = System.Single;
     public class NeuroService : IEnumerable
     {
-        private CellService _cService { get; set; }
-        private SynapseService _sService { get; set; }
+        /// <summary>
+        /// This field provides access to Cells in network
+        /// </summary>
+        /// <details>
+        /// Used to get access to cells, loading from db and saving to it
+        /// </details>
+        private readonly CellService _cService;
+
+        public List<Dictionary<int, CellBase>> Cells { get; private set; }
+  
+        /// <summary>
+        /// This field provides access to Synapses in network
+        /// </summary>
+        /// <details>
+        /// Used to get access to synapses, loading from db and saving to it
+        /// </details>
+        private readonly SynapseService _sService;
+
+        public List<Dictionary<int, SynapseBase>> Synapses { get; private set; }
+    
+        /// <summary>
+        /// This field is used for computing the membrane potential in the cell while spiking
+        /// </summary>
+        private readonly List<volt> _spikeVoltage;
+
+        /// <summary>
+        /// This field is used for computing the membrane potential 
+        /// in synapse terminal on the postsynaptic side
+        /// </summary>
+        private readonly List<volt> _pspVoltage;
+
+        /// <summary>
+        /// This field is used for implementation of LTP in synapses
+        /// </summary>
+        private readonly List<float> _LTPFunc;
+
+        /// <summary>
+        /// This field is used for implementation of LTD in synapses
+        /// </summary>
+        private readonly List<float> _LTDFunc;
+
         public NeuroRenderer Renderer { get; set; }
-        public List<Dictionary<int, CellBase>> _cells { get; private set; } 
-        public List<Dictionary<int, SynapseBase>> _synapses { get; private set; }
-        public NeuroService(CellService cellService, SynapseService synService)
+        public NeuroService(CellService     cellService,
+                            SynapseService  synService,
+                            List<volt>      spikeVoltage,
+                            List<volt>      pspVoltage,
+                            List<float>    LTPFunc,
+                            List<float>    LTDFunc
+                            )
         {
             _cService = cellService;
             _sService = synService;
-            _cells = new List<Dictionary<int, CellBase>>();
-            _synapses = new List<Dictionary<int, SynapseBase>>();
+
+            Cells = _cService.Cells;
+            Synapses = _sService.Synapses;
+
+            _spikeVoltage = spikeVoltage;
+            _pspVoltage = pspVoltage;
+
+            _LTPFunc = LTPFunc;
+            _LTDFunc = LTDFunc;
+        }
+
+        public NeuroService(CellService cellService,
+                            SynapseService synService
+                            )
+        {
+            _cService = cellService;
+            _sService = synService;
+
+            Cells = _cService.Cells;
+            Synapses = _sService.Synapses;
+
+            _spikeVoltage = new List<volt>() 
+                    {
+                        100.0F,
+                        //-500.0F,
+                        //-500.0F,
+                        50.0F,
+                        0.0F
+                    }; 
+
+            _pspVoltage = new List<volt>() 
+                    {
+                        1.0F,
+                        3.0F,
+                        10.0F,
+                        9.0F,
+                        7.0F,
+                        3.0F,
+                        2.0F,
+                        2.0F,
+                        1.0F,
+                        1.0F,
+                        1.0F
+                    };
+
+            _LTPFunc = new List<float>()
+            {
+                0.01F,
+                0.01F,
+                0.02F,
+                0.02F,
+                0.03F
+            };
+
+            _LTDFunc = new List<float>()
+            {
+                -0.01F,
+                -0.01F,
+                -0.02F,
+                -0.02F,
+                -0.03F
+            };
         }
 
         //public async Task<int> Save(IEnumerable<CellBase> input, InsertManyOptions opt = null)
@@ -60,13 +163,23 @@ namespace neuro
 
         public void Clear()
         {
-            _synapses.Clear();
-            _cells.Clear();
+            Cells.Clear();
+            Synapses.Clear();
         }
 
-        public void Create()
+        public async Task Create()
         {
-            Clear();
+           // Clear();
+
+            await _cService.Create(5, 5, 10);
+            Cells = _cService.Cells;
+
+            await _sService.Create(Cells.Last(), 85);
+            Synapses = _sService.Synapses;
+            return;
+
+
+
             Console.WriteLine("Creating new instances of cells");
             var cells = new  Dictionary<int, CellBase>();
             int cId = 0;
@@ -82,20 +195,20 @@ namespace neuro
                         {
                             CellId = cId,
                             Version = 0,
-                            Psps = null,
                             PostSynapticIds = new List<int>(),
                             PreSynapticIds = new List<int>(),
                             VoltageRp = -70.0F,
                             VoltageThresh = -30.0F,
                             Pos = new Position(x * 10 + rnd.Next(100), y * 10 + rnd.Next(100), z * 10 + rnd.Next(100)),
-                            CurrentVoltage = -70.0F
+                            CurrentVoltage = -70.0F,
+                            IsSpiking = false
                         };
                         cells[cId]  = c;
                         cId += 2;
                     }
                 }
             }
-            _cells.Add(cells);
+            Cells.Add(cells);
             Console.WriteLine("cells count : {0}", cells.Count);
             Console.WriteLine("Creating new instance of synapses");
 
@@ -139,25 +252,32 @@ namespace neuro
                     }
                 }
             }
-            _synapses.Add(synapses);
+            Synapses.Add(synapses);
             Console.WriteLine("synapse count : {0}", synapses.Count);
         }
 
         void Next(int gen)
         {
+            var taskCell =_cService.Clone(gen);
+            var taskSyn = _sService.Clone(gen);
+            Cells.Add(taskCell.Result);
+            Synapses.Add(taskSyn.Result);
+            return;
+
+
             var stopWatch = new Stopwatch();
             stopWatch.Start();
             var tempCell = new Dictionary<int, CellBase>();
-            var it = _cells[gen].GetEnumerator();
+            var it = Cells[gen].GetEnumerator();
             while (it.MoveNext())
             {
                 int key = it.Current.Key;
                 tempCell[key] = ExpressionTreeCloner.DeepFieldClone(it.Current.Value as Cell);
             }
             Parallel.ForEach(tempCell, c => { c.Value.Version++;
-                                                c.Value.CurrentVoltage = -70.0F;
+                                              c.Value.CurrentVoltage = -70.0F;
             });
-            _cells.Add(tempCell);
+            Cells.Add(tempCell);
 
             stopWatch.Stop();
             Console.WriteLine("         - copying cells :{0} ms", stopWatch.ElapsedMilliseconds);
@@ -165,14 +285,14 @@ namespace neuro
             stopWatch.Start();
 
             var tempSyn = new Dictionary<int, SynapseBase>();
-            var its = _synapses[gen].GetEnumerator();
+            var its = Synapses[gen].GetEnumerator();
             while (its.MoveNext())
             {
                 int key = its.Current.Key;
                 tempSyn[key] = ExpressionTreeCloner.DeepFieldClone(its.Current.Value as Synapse);
             }
             Parallel.ForEach(tempSyn, s => s.Value.Version++);
-            _synapses.Add(tempSyn);
+            Synapses.Add(tempSyn);
 
             stopWatch.Stop();
             Console.WriteLine("         - copying synapses Parallel :{0} ms", stopWatch.ElapsedMilliseconds);
@@ -181,63 +301,87 @@ namespace neuro
         void Process(int gen)
         {
             // check if there any spikes in cells
-            Parallel.ForEach(_cells[gen], pair =>
+            Parallel.ForEach(Cells[gen], pair =>
             {
                 var cell = pair.Value;
-                volt curVoltage = cell.CurrentVoltage;
+                volt curVoltage = cell.VoltageRp + cell.CurrentVoltage;
 
-                foreach(var synapseId in cell.PostSynapticIds)
+                if (!cell.IsSpiking)
                 {
-                    var synapse = _synapses[gen][synapseId];
-                    double dist = neuro.Position.Dist(synapse.Pos, cell.Pos);
-                    int type = synapse.Type == EnSynapseType.Excatotary ? 1 : -1;
-                    curVoltage += (synapse.CurrentVoltage * type * System.Convert.ToSingle(Math.Exp(-dist / 10)) ); //10 to service member
+                    foreach (var synapseId in cell.PostSynapticIds)
+                    {
+                        var synapse = Synapses[gen][synapseId];
+                        double dist = neuro.Position.Dist(synapse.Pos, cell.Pos);
+                        int type = synapse.Type == EnSynapseType.Excatotary ? 1 : -1;
+                        curVoltage += (synapse.CurrentVoltage * type * synapse.Strongness * System.Convert.ToSingle(Math.Exp(-dist / 100))); //10 to service member
+                    }
                 }
 
                 //if (curVoltage > -70.0F)
                 //{
                 //    Console.WriteLine(" -- Voltage: Id {0}, Voltage {1}, Thresh {2}", cell.CellId, curVoltage, cell.VoltageThresh);
                 //}
-                if (curVoltage >= cell.VoltageThresh )
+                if (!cell.IsSpiking && curVoltage >= cell.VoltageThresh )
                 {
                     Console.WriteLine(" -- Spike: Id {0}, Voltage {1}, Thresh {2}", cell.CellId, curVoltage, cell.VoltageThresh);
                     //spike generation
-                    List<volt> spikeVoltage = new List<volt>() // to service member
+
+                    // LTP computing
+                    // LTP: For each synapse where was spike activity PreSyn cell spikes then PostSyn cell spikes,
+                    // increase synapse strongness according to time distance between spikes dS ~ dT
+
+                    Parallel.ForEach(cell.PostSynapticIds, synId =>
                     {
-                        -500.0F,
-                        //-500.0F,
-                        //-500.0F,
-                        -100.0F,
-                        0.0F
-                    };
+                        for (int v = 0; v != _LTPFunc.Count; ++v)
+                        {
+                            int cellId = Synapses[gen][synId].PreSynCellObjectId;
+                            if (Cells[gen - _LTPFunc.Count + v][cellId].IsSpiking)
+                            {
+                                float dS = _LTPFunc[v] / (_LTPFunc.Count - v);
+                                for (int f = gen + 1; f != Synapses.Count; ++ f)
+                                {
+                                    Synapses[f][synId].Strongness += dS;
+                                }
+                            }
+                        }
+                    });
+
+                    // LTD computing
+                    // LTD: For each synapse where was spike activity PostSyn cell spikes then PreSyn cell spikes,
+                    // decrease synapse strongness according to time distance between spikes dS ~ dT
+                    Parallel.ForEach(cell.PreSynapticIds, synId =>
+                    {
+                        for (int v = 0; v != _LTDFunc.Count; ++v)
+                        {
+                            int cellId = Synapses[gen][synId].PostSynCellObjectId;
+                            if (Cells[gen - _LTDFunc.Count + v][cellId].IsSpiking)
+                            {
+                                float dS = _LTDFunc[v] / (_LTPFunc.Count - v);
+                                for (int f = gen + 1; f != Synapses.Count; ++f)
+                                {
+                                    Synapses[f][synId].Strongness += dS;
+                                }
+                            }
+                        }
+                    });
+
+
+                    List<volt> spikeVoltage = _spikeVoltage;
 
                     for (int i = 0; i != spikeVoltage.Count; ++i)
                     {
-                        _cells[gen + i][cell.CellId].CurrentVoltage += spikeVoltage[i];
+                        Cells[gen + i][cell.CellId].IsSpiking = true;
+                        Cells[gen + i][cell.CellId].CurrentVoltage += spikeVoltage[i];
                     }
 
                     //psp generation
-                    List<volt> pspVoltage = new List<volt>() // to service member
-                    {
-                        1.0F,
-                        3.0F,
-                        10.0F,
-                        9.0F,
-                        7.0F,
-                        3.0F,
-                        2.0F,
-                        2.0F,
-                        1.0F,
-                        1.0F,
-                        1.0F
-                    };
+                    List<volt> pspVoltage = _pspVoltage;
 
                     Parallel.ForEach(cell.PreSynapticIds, synId =>
                     {
                         for (int i = 0; i != pspVoltage.Count; ++i)
                         {
-                           
-                            _synapses[gen + i][synId].CurrentVoltage += pspVoltage[i];
+                           Synapses[gen + i][synId].CurrentVoltage += pspVoltage[i];
                         }
                     });
                 }
@@ -247,8 +391,8 @@ namespace neuro
 
         public async Task<int> Save()
         {
-            //var tS = _sService.Save(_synapses[0]);
-            //var tC = _cService.Save(_cells[0]);
+            //var tS = _sService.Save(Synapses[0]);
+            //var tC = _cService.Save(Cells[0]);
             //await Task.WhenAll(tS, tC);
             return 0;
         }
@@ -259,6 +403,14 @@ namespace neuro
             //Create();
             
             Random rnd = new Random();
+            List<int> cellIdsToFire = new List<int>();
+            foreach (var cell in Cells[0])
+            {
+                if (rnd.Next(100) > 80)
+                {
+                    cellIdsToFire.Add(cell.Value.CellId);
+                }
+            }
 
             for (int i = 0; i != 400; ++i)
             {
@@ -266,7 +418,7 @@ namespace neuro
                 Console.WriteLine("iteration : {0}", i);
                 watch.Start();
 
-                Next(_cells.Count - 1);
+                Next(Cells.Count - 1);
                 watch.Stop();
                 Console.WriteLine("     - Reserving next : {0} ms", watch.ElapsedMilliseconds);
                 // spotanious soikes
@@ -276,17 +428,14 @@ namespace neuro
                     continue;
                 }
 
-                if (i % 6 == 0 && i < 400)
+                if (i % 10 == 0 && i < 400)
                 {
-                    foreach (var cell in _cells[_cells.Count - 20])
-                    {
-                        if (rnd.Next(100) > 90)
-                        {
-                            cell.Value.CurrentVoltage = 70.0F;
-                        }
-                    }
 
-                    //var en = _synapses[_synapses.Count - 2].GetEnumerator();
+                    foreach (var cellId in cellIdsToFire)
+                    {
+                        Cells[Cells.Count - 19][cellId].CurrentVoltage = 70.0F;
+                    }
+                    //var en = Synapses[Synapses.Count - 2].GetEnumerator();
                     //while (en.MoveNext())
                     //{
                     //    var c = en.Current.Value;
@@ -299,15 +448,15 @@ namespace neuro
 
                 watch.Restart();
 
-                Process(_cells.Count - 20);
-                await Renderer.Update(_cells.Count - 19);
+                Process(Cells.Count - 20);
+                await Renderer.Update(Cells.Count - 19);
                 //Renderer.RenWin.Render();
-                Thread.Sleep(100);
+                //Thread.Sleep(100);
                 watch.Stop();
                 Console.WriteLine("     - Processing all network : {0}", watch.ElapsedMilliseconds);
 
-                _cells.RemoveAt(0);
-                _synapses.RemoveAt(0);
+                Cells.RemoveAt(0);
+                Synapses.RemoveAt(0);
                 continue;
                 watch.Restart();
                 //if (bSave)
@@ -319,8 +468,8 @@ namespace neuro
                 watch.Restart();
                 if (new ComputerInfo().AvailablePhysicalMemory < 3E9)
                 {
-                    _cells.RemoveAt(0);
-                    _synapses.RemoveAt(0);
+                    Cells.RemoveAt(0);
+                    Synapses.RemoveAt(0);
                 }
                 watch.Stop();
                 Console.WriteLine("     - Removing from Ram : {0}", watch.ElapsedMilliseconds);

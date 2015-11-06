@@ -37,7 +37,8 @@ namespace neuro
         public Position Pos { get; set; }
         [BsonElement("cv")]
         public volt CurrentVoltage { get; set; }
-
+        [BsonElement("s")]
+        public float Strongness { get; set; }
        
     }
 }
